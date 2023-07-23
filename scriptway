@@ -1,0 +1,22 @@
+node{
+    def mavenHost = tool name: "maven 3.9.3"
+    properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '5', daysToKeepStr: '', numToKeepStr: '5')), pipelineTriggers([pollSCM('* * * * *')])])
+     stage('get the code fron git'){
+    
+git branch: 'development', credentialsId: '5798d19b-ecc7-4374-ab48-1301a48f2860', url: 'https://github.com/blockfordprivatelimited/maven-web-application.git'
+}
+stage('build the code'){
+sh "${mavenHost}/bin/mvn clean package"
+}
+stage('generate sonar report'){
+sh "${mavenHost}/bin/mvn clean sonar:sonar"
+}
+stage('store artifactits in nexus'){
+sh "${mavenHost}/bin/mvn clean deploy"
+}
+stage('deploy to tomcat'){
+    sshagent(['4c557349-e348-481b-aa9a-cba39116239b']) {
+    sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@172.31.37.45:/opt/apache-tomcat-9.0.76/webapps"
+}
+}
+}
